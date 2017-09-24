@@ -39,7 +39,7 @@ typedef enum
   Exit_e
 }command_e;
 
-int sent_index, count, error, pktsz;
+int sent_index, count, error, pktsz, key_len;
 long num_bytes, num_pkts;
 char message[100];
 char option[25];
@@ -54,6 +54,7 @@ packet_t *pkt = NULL, *pkt_ack = NULL;
 FILE *fp;
 FILE *fp_temp;
 char key[] = "123456789098765432123456789098765432123456789098765432123456789"; //64-byte key for XOR encryption
+char reading_list = 0;
 
 
 char* Select_Option()
@@ -129,6 +130,7 @@ int main (int argc, char * argv[])
 	
 	memset(message, 0, sizeof(message));
 	pktsz = sizeof(pkt->buffer) + sizeof(pkt->index) + sizeof(pkt->data_length);
+	key_len = strlen(key);
 	printf("Size of each packet is %d\n", pktsz);
 
 	while(!close_loop)
@@ -185,6 +187,7 @@ void get_file(char *file_name, int sockfd, struct sockaddr_in remote, struct soc
 {
 	int index_req, old;
 	long file_size;
+	int loop_count = 0;
 	socklen_t addr_length = sizeof(struct sockaddr);
 	strcpy(message, file_name);
 	sbytes = sendto(sockfd, message, (sizeof(message) - 1), 0, (struct sockaddr *)&remote, sizeof(struct sockaddr));
@@ -206,16 +209,19 @@ void get_file(char *file_name, int sockfd, struct sockaddr_in remote, struct soc
 	/*Need to set timeout at server only*/
 	while(file_size > 0)
 	{
+		loop_count = 0;
 		rbytes = recvfrom(sockfd, pkt, pktsz, 0, (struct sockaddr *)&from_addr, &addr_length);  
 		if(pkt->index == index_req) {
 			printf("Pkt :: correct\n");
 			printf("Received index :: %d\n", pkt->index);
 
         		//64-bit decryption. double XOR every byte in packet to recover original data
-			while(loop_count<pkt_size)
-			{
-				pkt->buffer[loop_count] ^= key[loop_count % (key_len-1)] ^ key[loop_count % (key_len-1)];
-				++loop_count;
+			if (!reading_list){
+				while(loop_count<rbytes)
+				{
+					pkt->buffer[loop_count] ^= key[loop_count % (key_len-1)] ^ key[loop_count % (key_len-1)];
+					++loop_count;
+				}
 			}
 
 			fwrite(pkt->buffer, 1, pkt->data_length, fp);
@@ -251,6 +257,7 @@ void put_file(char *file_name, int sockfd, struct sockaddr_in remote, struct soc
 {
 	int index_req, old;
 	long file_size;
+	int loop_count = 0;
 	socklen_t addr_length = sizeof(struct sockaddr);
 	strcpy(message, file_name);
 	sbytes = sendto(sockfd, message, (sizeof(message) - 1), 0, (struct sockaddr *)&remote, sizeof(struct sockaddr));
@@ -294,6 +301,7 @@ void put_file(char *file_name, int sockfd, struct sockaddr_in remote, struct soc
 
 		while(file_size > 0)
 		{
+			loop_count = 0;
 			pkt->index++;
 			sent_index = pkt->index;
 
@@ -301,7 +309,7 @@ void put_file(char *file_name, int sockfd, struct sockaddr_in remote, struct soc
 
 
 			//64-bit encryption. XOR every byte in packet
-			while(loop_count<pkt_size)
+			while(loop_count<pktsz)
 			{
 				pkt->buffer[loop_count] ^= key[loop_count % (key_len-1)];
 				++loop_count;
@@ -331,7 +339,8 @@ void put_file(char *file_name, int sockfd, struct sockaddr_in remote, struct soc
 
 void list_directory(int sockfd, struct sockaddr_in remote, struct sockaddr_in from_addr)
 {
-	int i;
+	char i;
+	reading_list = 1;
 	get_file("ls_dir", sockfd, remote, from_addr);
 	printf("Listing files in server.....\n");
 	fp = fopen("ls_dir", "r");
@@ -341,6 +350,7 @@ void list_directory(int sockfd, struct sockaddr_in remote, struct sockaddr_in fr
 			putchar(i);
 		fclose(fp);
 	}
+	reading_list = 0;
 }
 
 void delete(char *file_name,int sockfd, struct sockaddr_in remote, struct sockaddr_in from_addr)
