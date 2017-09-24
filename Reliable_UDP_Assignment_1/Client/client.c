@@ -53,6 +53,8 @@ struct timeval timeout;
 packet_t *pkt = NULL, *pkt_ack = NULL;
 FILE *fp;
 FILE *fp_temp;
+char key[] = "123456789098765432123456789098765432123456789098765432123456789"; //64-byte key for XOR encryption
+
 
 char* Select_Option()
 {
@@ -208,6 +210,14 @@ void get_file(char *file_name, int sockfd, struct sockaddr_in remote, struct soc
 		if(pkt->index == index_req) {
 			printf("Pkt :: correct\n");
 			printf("Received index :: %d\n", pkt->index);
+
+        		//64-bit decryption. double XOR every byte in packet to recover original data
+			while(loop_count<pkt_size)
+			{
+				pkt->buffer[loop_count] ^= key[loop_count % (key_len-1)] ^ key[loop_count % (key_len-1)];
+				++loop_count;
+			}
+
 			fwrite(pkt->buffer, 1, pkt->data_length, fp);
 			file_size = file_size - pkt->data_length;
 			printf("Current file size is %ld\n", file_size);
@@ -288,6 +298,15 @@ void put_file(char *file_name, int sockfd, struct sockaddr_in remote, struct soc
 			sent_index = pkt->index;
 
 			num_bytes = fread(pkt->buffer, 1, (int)MAXBUFSIZE, fp);
+
+
+			//64-bit encryption. XOR every byte in packet
+			while(loop_count<pkt_size)
+			{
+				pkt->buffer[loop_count] ^= key[loop_count % (key_len-1)];
+				++loop_count;
+			}
+
 			pkt->data_length = num_bytes;
 
 			sbytes = sendto(sockfd, pkt, pktsz, 0, (struct sockaddr *)&remote, sizeof(struct sockaddr));
