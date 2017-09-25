@@ -1,15 +1,15 @@
 # Network-System-Assignment 1
-# This is an implementation of UDP transfer layer with reliability using handshaking and encyrption.
-# There are five functionality supported in the server which client can request:
+This is an implementation of UDP transfer layer with reliability using handshaking and encyrption.
+There are five functionality supported in the server which client can request:
 ____________________________________________________________________________
 # S.No.:	Functionality 		Explanation 
 ____________________________________________________________________________
 
-# 1		Get			Transfer a file form server to client
-# 2		Put			Transfer a file to server from client
-# 3		ls			list all the file the server 
-# 4		delete			delete a file on the server
-# 5		exit			close the server
+ 1		Get			Transfer a file form server to client
+ 2		Put			Transfer a file to server from client
+ 3		ls			list all the file the server 
+ 4		delete			delete a file on the server
+ 5		exit			close the server
 ____________________________________________________________________________
 
 # Folder Structure: 
@@ -97,3 +97,7 @@ HANDSHAKING AND RELAIBILITY:
 1) Client sends "Exit_e" signal to the server.
 2) Server responds to clients with "ready_exit".
 3) Server closes its socket and exits the execution.
+
+#XOR Encryption.
+
+Each Data packet is encrypted using a unique KEY. The packet is XORed at the sender side with the key and then transmitted. At the reciver side, the packet is double XORed to extract the data. The security lies in the uniqueness of the KEY.

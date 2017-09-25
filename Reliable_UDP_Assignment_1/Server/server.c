@@ -197,7 +197,7 @@ void put_file(int sockfd, struct sockaddr_in remote)
 		printf("Received index is %d\n", pkt->index);
 
 		//64-bit encryption. XOR every byte
-		while(loop_count<pktsz)
+		while(loop_count<nbytes)
 		{
 			pkt->buffer[loop_count] ^= key[loop_count % (key_len-1)];
 			++loop_count;

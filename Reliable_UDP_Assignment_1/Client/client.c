@@ -309,7 +309,7 @@ void put_file(char *file_name, int sockfd, struct sockaddr_in remote, struct soc
 
 
 			//64-bit encryption. XOR every byte in packet
-			while(loop_count<pktsz)
+			while(loop_count<nbytes)
 			{
 				pkt->buffer[loop_count] ^= key[loop_count % (key_len-1)];
 				++loop_count;
