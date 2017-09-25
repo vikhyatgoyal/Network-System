@@ -222,8 +222,7 @@ void put_file(int sockfd, struct sockaddr_in remote)
 void list_directory(int sockfd, struct sockaddr_in remote)
 {
 	printf("Entering ls function\n");
-	// strcpy(file_name, "ls_dir");
-	fp_ls = fopen("ls_dir", "w+");
+	fp_ls = fopen("ls_server", "w+");
 	reading_list = 1;
 	if(fp_ls == NULL)
 	{
@@ -233,8 +232,9 @@ void list_directory(int sockfd, struct sockaddr_in remote)
 		exit(1);
 	}
 
-	system("ls -la> ls_dir");
+	system("ls -la> ls_server");
 	get_file(sockfd, remote);
+	remove("ls_server");
 	reading_list = 0;
 }
 

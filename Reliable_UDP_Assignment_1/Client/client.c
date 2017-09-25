@@ -95,57 +95,6 @@ char* Select_Option()
 }
 
 
-int main (int argc, char * argv[])
-{	
-	char *filename = malloc(25*(sizeof(char)));
-	char *choice = malloc(10*sizeof(char));
-	int close_loop = 0;
-	struct sockaddr_in remote;  //"Internet socket address structure"
-
-	if (argc < 3)
-	{
-		printf("USAGE:  <server_ip> <server_port>\n");
-		exit(1);
-	}
-
-	/******************
-	  Here we populate a sockaddr_in struct with
-	  information regarding where we'd like to send our packet 
-	  i.e the Server.
-	 ******************/
-	memset(&remote,0, sizeof(remote));
-	remote.sin_family = AF_INET;                 //address family
-	remote.sin_port = htons(atoi(argv[2]));      //sets port to network byte order
-	remote.sin_addr.s_addr = inet_addr(argv[1]); //sets remote IP address
-
-	//Causes the system to create a generic socket of type UDP (datagram)
-	if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
-	{
-		printf("unable to create client socket");
-		exit(1);
-	}
-
-	struct sockaddr_in from_addr;
-	socklen_t addr_length = sizeof(struct sockaddr);
-	
-	memset(message, 0, sizeof(message));
-	pktsz = sizeof(pkt->buffer) + sizeof(pkt->index) + sizeof(pkt->data_length);
-	key_len = strlen(key);
-	printf("Size of each packet is %d\n", pktsz);
-
-	while(!close_loop)
-	{
-		choice = Select_Option();
-		printf("Requesting Server Functionality.....\n");
-		printf("%s",option);
-	    	sbytes = sendto(sockfd, choice, (sizeof(choice)), 0, (struct sockaddr *)&remote, sizeof(struct sockaddr));
-		rbytes = recvfrom(sockfd, message, (int)MAXBUFSIZE, 0, (struct sockaddr *)&from_addr, &addr_length);  
-		printf("Server Response :: %s \n", message);	
-		close_loop = execute_transfer(message,option, remote, from_addr);		
-	}
-	close(sockfd);
-}
-
 int execute_transfer(char* server_response, char* fl, struct sockaddr_in remote, struct sockaddr_in from_addr ){
 	int result = 0;
 	if(strstr(server_response, "ready_put")) {
@@ -173,11 +122,9 @@ int execute_transfer(char* server_response, char* fl, struct sockaddr_in remote,
 
 	if(!strcmp(server_response, "ready_exit")) {
 		memset(server_response, 0, sizeof(server_response));
-		printf("Server wants to stop\n");
 		strcpy(server_response, "Okay do it");
 	   	sbytes = sendto(sockfd, server_response, (sizeof(server_response) - 1), 0, (struct sockaddr *)&remote, sizeof(struct sockaddr));
-		printf("Client is all alone now....\n");
-		printf("Client is exiting because it is useless\n");
+		printf("Client Closed\n");
 		result = 1;
 	}
 	return(result);
@@ -309,7 +256,7 @@ void put_file(char *file_name, int sockfd, struct sockaddr_in remote, struct soc
 
 
 			//64-bit encryption. XOR every byte in packet
-			while(loop_count<nbytes)
+			while(loop_count<num_bytes)
 			{
 				pkt->buffer[loop_count] ^= key[loop_count % (key_len-1)];
 				++loop_count;
@@ -341,15 +288,15 @@ void list_directory(int sockfd, struct sockaddr_in remote, struct sockaddr_in fr
 {
 	char i;
 	reading_list = 1;
-	get_file("ls_dir", sockfd, remote, from_addr);
-	printf("Listing files in server.....\n");
-	fp = fopen("ls_dir", "r");
+	get_file("ls_server", sockfd, remote, from_addr);
+	fp = fopen("ls_server", "r");
 	if(fp)
 	{	
-		while((i = getc(fp)) != EOF)
-			putchar(i);
-		fclose(fp);
+	while((i = getc(fp)) != EOF)
+		putchar(i);
+	fclose(fp);
 	}
+	remove("ls_server");
 	reading_list = 0;
 }
 
@@ -358,6 +305,59 @@ void delete(char *file_name,int sockfd, struct sockaddr_in remote, struct sockad
 	socklen_t addr_length = sizeof(struct sockaddr);
 	strcpy(message, file_name);
 	sbytes = sendto(sockfd, message, pktsz, 0, (struct sockaddr *)&remote, sizeof(struct sockaddr));
-	printf("Deleting requested file in server\n");
+	printf("Deleted file\n");
 }
+
+
+int main (int argc, char * argv[])
+{	
+	char *filename = malloc(25*(sizeof(char)));
+	char *choice = malloc(10*sizeof(char));
+	int close_loop = 0;
+	struct sockaddr_in remote;  //"Internet socket address structure"
+
+	if (argc < 3)
+	{
+		printf("USAGE:  <server_ip> <server_port>\n");
+		exit(1);
+	}
+
+	/******************
+	  Here we populate a sockaddr_in struct with
+	  information regarding where we'd like to send our packet 
+	  i.e the Server.
+	 ******************/
+	memset(&remote,0, sizeof(remote));
+	remote.sin_family = AF_INET;                 //address family
+	remote.sin_port = htons(atoi(argv[2]));      //sets port to network byte order
+	remote.sin_addr.s_addr = inet_addr(argv[1]); //sets remote IP address
+
+	//Causes the system to create a generic socket of type UDP (datagram)
+	if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
+	{
+		printf("unable to create client socket");
+		exit(1);
+	}
+
+	struct sockaddr_in from_addr;
+	socklen_t addr_length = sizeof(struct sockaddr);
+	
+	memset(message, 0, sizeof(message));
+	pktsz = sizeof(pkt->buffer) + sizeof(pkt->index) + sizeof(pkt->data_length);
+	key_len = strlen(key);
+	printf("Size of each packet is %d\n", pktsz);
+
+	while(!close_loop)
+	{
+		choice = Select_Option();
+		printf("Requesting Server Functionality.....\n");
+		printf("%s",option);
+	    	sbytes = sendto(sockfd, choice, (sizeof(choice)), 0, (struct sockaddr *)&remote, sizeof(struct sockaddr));
+		rbytes = recvfrom(sockfd, message, (int)MAXBUFSIZE, 0, (struct sockaddr *)&from_addr, &addr_length);  
+		printf("Server Response :: %s \n", message);	
+		close_loop = execute_transfer(message,option, remote, from_addr);		
+	}
+	close(sockfd);
+}
+
 
