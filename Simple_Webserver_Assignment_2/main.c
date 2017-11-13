@@ -19,6 +19,7 @@
 int mylisten, clients[CONNMAX];
 int client_num=0;
 
+/*This function extracts the size information of the file*/
 int filesize(int file_desc)
 {
   struct stat fileinfo;
@@ -30,6 +31,7 @@ int filesize(int file_desc)
   return (int)fileinfo.st_size;
 }
 
+/*Convert ascii to integer*/
 char* itoa(int num,char *str)
 {
    if(str == NULL)
@@ -38,6 +40,7 @@ char* itoa(int num,char *str)
    return str;
 }
 
+/*timeout after the keepalive timer closes the client on which timeout occured*/
 void handle_timeout(int sig)
 {
      printf("!!!Timeout!!!\n");
@@ -48,6 +51,7 @@ void handle_timeout(int sig)
      exit(0);    
 }
 
+/*Helper function to reverse string*/
 char* stringreverse(char *str)
 {
     char *start,*end;
@@ -62,6 +66,7 @@ char* stringreverse(char *str)
     return str;
 }
 
+/*All the config values from w.conf are read using string parsing and finding a particular search string.*/
 char* read_config(char *search_string)
 {
  int file;
@@ -83,6 +88,7 @@ char* read_config(char *search_string)
  return info;
 }
 
+/*All the supported files from w.conf are read using string parsing and finding a particular filetype.*/
 char* read_fileformat(char* file_info,char *file_type)
 {
  int file;
@@ -199,8 +205,6 @@ void handle_nofile(char* response,char* errmsg,int n, char *http, char *path ){
     send_to_client(clients[n],errmsg);
 }
 
-
-
 void handle_httpversion(char* response,char* errmsg,int n, char *http,char *clientrequest){
      printf("handle wrong http request\n"); 
      strcpy(response,http);
@@ -216,7 +220,7 @@ void handle_httpversion(char* response,char* errmsg,int n, char *http,char *clie
      send_to_client(clients[n],errmsg);
 }
 
-
+/* Main handler for all the client requests*/
 void process_client_request(int n,char* ROOT)
 {
 	char mesg[99999], *clientrequest[3], data_to_send[BYTES], keepalivestring[10000];
@@ -252,12 +256,10 @@ void process_client_request(int n,char* ROOT)
 		{
 			clientrequest[1] = strtok (NULL, " \t");
 			clientrequest[2] = strtok (NULL, " \t\n");
-			if ( strncmp( clientrequest[2], "HTTP/1.0", 8) == 0) {
+			if ( strncmp( clientrequest[2], "HTTP/1.0", 8) == 0)
                            http = "HTTP/1.0 ";
-                        }
-                        if(strncmp( clientrequest[2], "HTTP/1.1", 8) == 0 ) {
+                        if(strncmp( clientrequest[2], "HTTP/1.1", 8) == 0 )
                            http = "HTTP/1.1 ";  
-                        }
                         if( strncmp( clientrequest[2], "HTTP/1.0", 8) != 0 && strncmp( clientrequest[2], "HTTP/1.1", 8) != 0 ){
                            handle_httpversion(response,errmsg,n,http,clientrequest[2]);
 			}
@@ -280,9 +282,9 @@ void process_client_request(int n,char* ROOT)
                                
 		                if ( (fd=open(path, O_RDONLY))!=-1 )    
 				{
+					itoa(filesize(fd),size);
                                         strcpy(response,http);
                                         strcat(response,"200 Document Follows\n");
-                                        itoa(filesize(fd),size);
                                         strcat(response,"Content-Size : ");
                                         strcat(response,size);
                                         strcat(response,"\n");
