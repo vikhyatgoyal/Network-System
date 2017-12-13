@@ -56,6 +56,38 @@ static unsigned int FileSize (FILE * fileDescriptor) {
     return size;
 }
 
+
+void FileCreationTime(char *pwd, char File_time[1000]) {
+    struct stat attr;
+    stat(pwd, &attr);
+    char date[10];
+    sprintf(File_time,"%s",ctime(&attr.st_mtime));
+
+}
+
+char *FindMD5(const char *str, int length) {
+    int n;
+    MD5_CTX c;
+    unsigned char digest[16];
+    char *out = (char*)malloc(33);
+    MD5_Init(&c);
+    while (length > 0) {
+        if (length > 512) {
+            MD5_Update(&c, str, 512);
+        } else {
+            MD5_Update(&c, str, length);
+        }
+        length -= 512;
+        str += 512;
+    }
+
+    MD5_Final(digest, &c);
+    for (n = 0; n < 16; ++n) {
+        snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
+    }
+    return out;
+}
+
 void webserver() {
     struct addrinfo webServerHints, *res, *p;
     memset (&webServerHints, 0, sizeof(webServerHints)); // Making sure the struct is empty
@@ -90,40 +122,6 @@ void webserver() {
     }
 }
 
-void FileCreationTime(char *pwd, char File_time[1000]) {
-    struct stat attr;
-    stat(pwd, &attr);
-    char date[10];
-    sprintf(File_time,"%s",ctime(&attr.st_mtime));
-
-}
-
-char *FindMD5(const char *str, int length) {
-    int n;
-    MD5_CTX c;
-    unsigned char digest[16];
-    char *out = (char*)malloc(33);
-
-    MD5_Init(&c);
-
-    while (length > 0) {
-        if (length > 512) {
-            MD5_Update(&c, str, 512);
-        } else {
-            MD5_Update(&c, str, length);
-        }
-        length -= 512;
-        str += 512;
-    }
-
-    MD5_Final(digest, &c);
-
-    for (n = 0; n < 16; ++n) {
-        snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
-    }
-
-    return out;
-}
 
 #define FILE_SIZE 1000000
 
@@ -263,15 +261,10 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
     char Invalid_Method[MAX_BUFFER_SIZE] = "<html><body><H1>Error 400 Bad Request: Invalid Method </H1></body></html>";
     char Invalid_version[MAX_BUFFER_SIZE] =  "<html><body><H1>Error 400 Bad Request: Invalid HTTP Version</H1></body></html>";
     
-    if (read(sockfd, readBufferFrmClient, MAX_BUFFER_SIZE)<0)
-    {
+    if (read(sockfd, readBufferFrmClient, MAX_BUFFER_SIZE)<0) {
         printf("recieve error\n");
     }
-
-
-    // On receiving valid data
-    else
-    {
+    else {
         
         // Extracting 
         // 1. method - request method
@@ -287,14 +280,12 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
             printf("Invalid Request method\n");
             exit(1);
         }
-
         // checking validity of HTTP method
-        //else if ((strncmp(http_ver,"HTTP/1.0",strlen("HTTP/1.0")) != 0)  || (strncmp(http_ver,"HTTP/1.1",strlen("HTTP/1.1")) != 0)) {
-          //  write(sockfd,Invalid_version,strlen(Invalid_version));
-            //printf("Invalid HTTP Version");
-            //exit(1);
-        //}
-
+        else if ((strncmp(http_ver,"HTTP/1.0",strlen("HTTP/1.0")) != 0)  || (strncmp(http_ver,"HTTP/1.1",strlen("HTTP/1.1")) != 0)) {
+            write(sockfd,Invalid_version,strlen(Invalid_version));
+            printf("Invalid HTTP Version");
+            exit(1);
+        }
         else {
             int i=0;
             websiteWithSlash= strstr(path,"//");
