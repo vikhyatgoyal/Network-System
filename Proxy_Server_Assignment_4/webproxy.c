@@ -69,39 +69,32 @@ void webserver() {
         exit(GETADDRINFOERROR);
     }
     // Bind the sock address
-    for (p = res; p!=NULL; p=p->ai_next)
-    {
-        if ((listenfd = socket (p->ai_family, p->ai_socktype, 0)) == -1)
-        {
+    for (p = res; p!=NULL; p=p->ai_next) {
+        if ((listenfd = socket (p->ai_family, p->ai_socktype, 0)) == -1) {
             continue;
         }
         if (bind(listenfd, p->ai_addr, p->ai_addrlen) == 0) break;
     }
-
-    if (p==NULL)
-    {
+    if (p==NULL) {
         perror ("socket() or bind() creation failed");
         exit(BINDERROR);
     }
-
     freeaddrinfo(res);
-    if (setsockopt(listenfd,SOL_SOCKET,SO_REUSEADDR,&s,sizeof(int)) == -1) 
-    {
+    if (setsockopt(listenfd,SOL_SOCKET,SO_REUSEADDR,&s,sizeof(int)) == -1)  {
         printf("setsockopt error");
         exit(1);
     }
-    if ( listen (listenfd, MAX_CONNECTIONS) != 0 )
-    {
+    if ( listen (listenfd, MAX_CONNECTIONS) != 0 ) {
         perror("listen() error");
         exit(LISTENERROR);
     }
 }
 
-void FileCreationTime(char *pwd, char timeCreated[1000]) {
+void FileCreationTime(char *pwd, char File_time[1000]) {
     struct stat attr;
     stat(pwd, &attr);
     char date[10];
-    sprintf(timeCreated,"%s",ctime(&attr.st_mtime));
+    sprintf(File_time,"%s",ctime(&attr.st_mtime));
 
 }
 
@@ -134,13 +127,11 @@ char *FindMD5(const char *str, int length) {
 
 #define FILE_SIZE 1000000
 
-void Prefetch_teh_link(char * pwd, int sockfd)
-{
+void Prefetch_the_link(char * pwd, int sockfd) {
     printf("#####     Entering prefetching    #####\n");
-    
     char bufTosend[FILE_SIZE];
     char filepath[MAX_BUFFER_SIZE];
-    char prefeReq[MAX_BUFFER_SIZE];
+    char PrefetchRequest[MAX_BUFFER_SIZE];
     char buffer[MAX_BUFFER_SIZE];
     int readFile,n;
     char check[MAX_BUFFER_SIZE];
@@ -148,19 +139,19 @@ void Prefetch_teh_link(char * pwd, int sockfd)
     char *md5;  
     int flag;
     FILE *fp;   
-    char newVar[MAX_BUFFER_SIZE];
-    char * ret;
-    char *retVal;
+    char newlinkread[MAX_BUFFER_SIZE];
+    char * readptr;
+    char *readptrVal;
     char path[MAX_BUFFER_SIZE];
     struct sockaddr_in host_addr;
     struct hostent* host;
-    int p=9;
+    char *newpointer;
 
     bzero(bufTosend,sizeof(bufTosend));
     bzero(filepath,sizeof(filepath));
-    bzero(prefeReq,sizeof(prefeReq));
+    bzero(PrefetchRequest,sizeof(PrefetchRequest));
     bzero(check,sizeof(check));
-    bzero(newVar,sizeof(newVar));
+    bzero(newlinkread,sizeof(newlinkread));
     bzero(path,sizeof(path));
     bzero(buffer,sizeof(buffer));
 
@@ -172,30 +163,26 @@ void Prefetch_teh_link(char * pwd, int sockfd)
 
     // reading file
     readFile = read(openFile,bufTosend, sizeof bufTosend);
-    if (readFile < 0)
-    {
+    if (readFile < 0) {
         printf("FILE reading error\n");
     }
 
-    char *newPtr;
-
     // check if href is present
-    if((ret=strstr(bufTosend,"href=\"http://"))!= NULL){
-        while((ret=strstr(ret,"href=\"http://")) ){
-            ret = ret+13;
+    if((readptr=strstr(bufTosend,"href=\"http://"))!= NULL){
+        while((readptr=strstr(readptr,"href=\"http://")) ){
+            readptr = readptr+13;
             i=0;
-
             // extracting the http url after href command
-            while(*ret!='"') {
-                    newVar[i] = *ret;   
-                    printf("%c",*ret);
-                    ret++;
+            while(*readptr!='"') {
+                    newlinkread[i] = *readptr;   
+                    printf("%c",*readptr);
+                    readptr++;
                     i++;
                 }
-            newPtr=ret;
-            newVar[i]='\0';
+            newpointer=readptr;
+            newlinkread[i]='\0';
             // computing the md5sum of the file 
-            strcpy(check, newVar);
+            strcpy(check, newlinkread);
             md5 = FindMD5(check,strlen(check));
             
             printf("\n md5 sum of the link prefetching file:%s",md5);
@@ -203,22 +190,22 @@ void Prefetch_teh_link(char * pwd, int sockfd)
             strcat(filepath,md5);
             strcat(filepath,".html");
             printf("filepath: %s",filepath);
-            retVal = strstr(newVar,"/");
-            if ( retVal == NULL){
+            readptrVal = strstr(newlinkread,"/");
+            if ( readptrVal == NULL){
               continue;
             }
-            if(retVal!=NULL){
-                strcpy(path,retVal);
+            if(readptrVal!=NULL){
+                strcpy(path,readptrVal);
             }
             
-            *retVal='\0';
-            ret =newPtr +1;
+            *readptrVal='\0';
+            readptr =newpointer +1;
 
-            printf("\nGET %s HTTP/1.0\r\nHost: %s\r\nConnection: close\r\n\r\n",path,newVar);
-            sprintf(prefeReq,"GET %s HTTP/1.0\r\nHost: %s\r\nConnection: close\r\n\r\n",path,newVar);
+            printf("\nGET %s HTTP/1.0\r\nHost: %s\r\nConnection: close\r\n\r\n",path,newlinkread);
+            sprintf(PrefetchRequest,"GET %s HTTP/1.0\r\nHost: %s\r\nConnection: close\r\n\r\n",path,newlinkread);
             
             // sending request to server
-            n = send(sockfd,prefeReq,strlen(prefeReq),0);
+            n = send(sockfd,PrefetchRequest,strlen(PrefetchRequest),0);
             printf("\n sending request");
             
             fp=fopen(filepath,"w");
@@ -416,8 +403,8 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
 
                     
                     printf("\n\nStarting the Prefeting operation... \n\n");
-                    Prefetch_teh_link(pwd,hostfd);
-                    printf("Prefetch_teh_link Done\n" );
+                    Prefetch_the_link(pwd,hostfd);
+                    printf("Prefetch_the_link Done\n" );
                 }
 
                 fclose(fileProxy);
@@ -437,85 +424,66 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
     printf("Closing the sockets........................\n");
 }
 
-int Present_Cache(char *timeoutStr, char *pwd, int sockfd)
-{
-    int timeout = atoi(timeoutStr);
-    char timeCreated[1000];
+int Present_Cache(char *timeoutdesired, char *pwd, int sockfd) {
+    int timeout = atoi(timeoutdesired);
+    char File_time[1000];
     int nbytes;
     char bufTosend[MAX_BUFFER_SIZE];
-    FileCreationTime(pwd, timeCreated);
-    printf("timeCreated %s\n", timeCreated);
+    FileCreationTime(pwd, File_time);
+    printf("File_time %s\n", File_time);
     FILE *sendFilefd;
+    time_t current_time;
 
-    if( access( pwd, F_OK ) != -1 ) 
-    {
+    if( access( pwd, F_OK ) != -1 ) {
         // file available
         char *hours, *minutes,*seconds;
-
         int hoursInt, minutesInt, secondsInt;
-        hours = strtok(timeCreated,":") ;
-        
+	//extract the fields of time
+        hours = strtok(File_time,":") ;
         minutes = strtok(NULL,":") ;
-        
         seconds = strtok(NULL,":") ;
         seconds = strtok(seconds, " ");
-
         hours = strtok(hours," ") ;
         hours = strtok(NULL," ");
         hours = strtok(NULL," ");
         hours = strtok(NULL," ");
-
         int fileTime = atoi(hours)*3600 + atoi(minutes)*60 + atoi(seconds); 
 
-        time_t current_time;
-        time(&current_time);
-        bzero(timeCreated,sizeof(timeCreated));
-        //strcpy(timeCreated,ctime(&current_time));
-        sprintf(timeCreated,"%s", ctime(&current_time));
-
-        printf("presentTime %s\n", timeCreated);
-
-        hours = strtok(timeCreated,":") ;
-        
+        time(&current_time); //get current time
+        bzero(File_time,sizeof(File_time)); //reuse the file_tile array to extract current time
+        sprintf(File_time,"%s", ctime(&current_time));
+        printf("presentTime %s\n", File_time);
+        hours = strtok(File_time,":") ;
         minutes = strtok(NULL,":") ;
-        
         seconds = strtok(NULL,":") ;
         seconds = strtok(seconds, " ");
-
         hours = strtok(hours," ") ;
         hours = strtok(NULL," ");
         hours = strtok(NULL," ");
         hours = strtok(NULL," ");
-
         int presentTime = atoi(hours)*3600 + atoi(minutes)*60 + atoi(seconds); 
 
         printf("Present time %d\n", presentTime);
         printf("File time %d \n", fileTime);
-        printf("mama very important %d\n", presentTime - fileTime);
         if (presentTime - fileTime > timeout) {
             printf("TIMEOUT EXPIRED\n");
             return FAIL;
         }
-
         else {
             printf("SENDING FILE FROM CACHE MEMORY\n");
             bzero(bufTosend,sizeof(bufTosend));
             printf("Sending cached file\n");
             sendFilefd=fopen(pwd,"r");
-
             do{
                 nbytes = fread(bufTosend,1,MAX_BUFFER_SIZE,sendFilefd);
                 send(sockfd,bufTosend,nbytes,0);
             }
             while(nbytes>0);
-
             fclose(sendFilefd);
             close(sockfd);
             return SUCCESS;
-
         }
     }
-
     else {
         return FAIL;
     }
@@ -526,18 +494,6 @@ int main(int argc, char* argv[]) {
     char pwd[MAX_BUFFER_SIZE];  // Current working direcroty
     char timeout[10];
     int sock_n;
-    if (argc<3)
-    {
-        printf("Invalid argumants: ./webproxy <port_num> <Cache Timeout>\n");
-        exit(1);
-    }
-
-    printf("\n\nPORT number is: %s\n\n", argv[1]);
-    printf("\n\nCache Timeout is: %s\n\n", argv[2]);
-
-    strcpy(PORT,argv[1]);
-    strcpy(timeout,argv[2]);
-
     int pid;
     int connectionNum=0;
     int i;
@@ -545,23 +501,19 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in clientAddr;
     socklen_t addrlen;
     char c;    
-    char parentdir[MAX_BUFFER_SIZE];
-    char cmdCreateCache[MAX_BUFFER_SIZE];
+    char dir_current[MAX_BUFFER_SIZE];
+    char CreateCatche[MAX_BUFFER_SIZE];
 
-    // Finds the current working directory
-    if (getcwd(parentdir, sizeof(parentdir)) != NULL) {
-        printf("Current working dir: %s\n", parentdir);
-        sprintf(pwd,"%s/cache/",parentdir);
-        sprintf(cmdCreateCache,"mkdir -p %s",pwd);
-        system(cmdCreateCache);
+    if (argc<3) {
+        printf("Invalid argumants: ./webproxy <port_num> <Cache Timeout>\n");
+        exit(1);
     }
-    printf("Current working Directory: %s\n",pwd);
 
+    printf("\n\nPORT number is: %s\n\n", argv[1]);
+    printf("\n\nCache Timeout is: %s\n\n", argv[2]);
+    strcpy(PORT,argv[1]);
+    strcpy(timeout,argv[2]);
 
-    for (i=0; i<MAX_CONNECTIONS; i++) {
-        clients[i]=-1;
-    }
- 
     int port_num = atoi(PORT);
 
     // Exit if port number less than 1024
@@ -569,36 +521,39 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "The port number chosen is %d and is INVALID\n", port_num);
         exit(PORTERROR);
     }
-    
-    // Used to start the server
-    webserver();
 
+    // Finds the current working directory and create the catch folder
+    if (getcwd(dir_current, sizeof(dir_current)) != NULL) {
+        printf("Current working dir: %s\n", dir_current);
+        sprintf(pwd,"%s/cache/",dir_current);
+        sprintf(CreateCatche,"mkdir -p %s",pwd);
+        system(CreateCatche);
+    }
+    printf("Current working Directory: %s\n",pwd);
+    for (i=0; i<MAX_CONNECTIONS; i++) {
+        clients[i]=-1;
+    }
+    webserver(); //start the server
     int connectionCount = 0;
     // ACCEPT connections
     while (1) {
         addrlen = sizeof(clientAddr);
         // accepting the connections and forking it into a child 
-        
         clients[connectionNum] = accept (listenfd, (struct sockaddr *) &clientAddr, &addrlen);
-        //printf("Coming here again\n");
         if (clients[connectionNum]<0)
             error ("accept() error");
-        else
-        {
-            printf("\n\n####    Connection Accepted: %d    ####\n\n", connectionCount++); 
+        else {
+            printf("\n\n###########Connection Accepted: %d ############\n\n", connectionCount++); 
         }
-            pid = fork();               
-            if (pid <0)
-                printf("Error on Fork !!");
-        
-            if (pid == 0) {
-                // The follwing function handles the incoming connections
-                serve_client(clients[connectionNum], timeout, pwd);    
-                close(listenfd);
-                exit(0);
-            } 
-            
+        pid = fork();               
+        if (pid <0)
+           printf("Error on Fork !!");
+        if (pid == 0) {
+           // The follwing function handles the incoming connections
+           serve_client(clients[connectionNum], timeout, pwd);    
+           close(listenfd);
+           exit(0);
+        }        
     }
-
     return 0;
 }
