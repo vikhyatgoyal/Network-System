@@ -278,11 +278,11 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
             exit(1);
         }
         // checking validity of HTTP method
-        else if ((strncmp(http_ver,"HTTP/1.0",strlen("HTTP/1.0")) != 0)  || (strncmp(http_ver,"HTTP/1.1",strlen("HTTP/1.1")) != 0)) {
-            write(sockfd,Invalid_version,strlen(Invalid_version));
-            printf("Invalid HTTP Version");
-            exit(1);
-        }
+       // else if ((strncmp(http_ver,"HTTP/1.0",strlen("HTTP/1.0")) != 0)  || (strncmp(http_ver,"HTTP/1.1",strlen("HTTP/1.1")) != 0)) {
+         //   write(sockfd,Invalid_version,strlen(Invalid_version));
+           // printf("Invalid HTTP Version");
+            //exit(1);
+        //}
         else {
             int i=0;
             websiteWithSlash= strstr(path,"//");
