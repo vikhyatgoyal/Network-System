@@ -225,7 +225,6 @@ int COUNT = 0;
 
 void serve_client(int sockfd, char *timeout, char *pwd) {
     int cache;
-
     char readBufferFrmClient[MAX_BUFFER_SIZE];
     char readBufferFrmServer[MAX_BUFFER_SIZE];
     char method[MAX_BUFFER_SIZE];
@@ -242,11 +241,9 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
     struct sockaddr_in hostAddr;
     int on = 1;
     int findcache;
-
     int hostfd;    //connects to host
-    int nbytes,sbytes;      //
+    int nbytes,sbytes; 
     int len;
-
     char filename[MAX_BUFFER_SIZE];
     FILE *fileProxy;
 
@@ -297,7 +294,6 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
                 website[i]=websiteWithSlash[i];
             }  
             url=strstr(websiteWithSlash,"/");
-
             printf("\n website: %s\n", website);
             printf("\n path to url: %s\n", url);
 
@@ -318,14 +314,12 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
 
             // find if the file is present in cache or not
             findcache = Present_Cache(timeout, pwd, sockfd);
-            printf("Printing the status of cache %d\n", findcache);
+            printf("Present in cache =  %d\n", findcache);
 
             // if file doesn't exit on cache get it from server
             if (findcache == FAIL) {
                 printf("NO CACHE FOUND...\n\n");
-
                 printf("Extracting file from host server\n");
-
                 fileProxy = fopen(pwd,"ab");
                 if (fileProxy < 0) {
                     perror("FILE ERROR in serve_client");
@@ -335,7 +329,6 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
                     perror("Inavlid host address");
                     exit(1);
                 }
-
                 // parameters to connect to host server
                 bzero(&hostAddr,sizeof(hostAddr));                    //zero the struct
                 hostAddr.sin_family = AF_INET;                   //address family
@@ -343,70 +336,50 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
                 memcpy(&hostAddr.sin_addr, hostToconnect->h_addr, hostToconnect->h_length);
                 len = sizeof(hostAddr);
                 hostfd = socket(AF_INET, SOCK_STREAM, 0);
-                if (hostfd<0)
-                {
+                if (hostfd<0) {
                     perror("HOST socket creation failed");
                 }
                 setsockopt(hostfd, SOL_SOCKET, SO_REUSEADDR, &on, 4);   //????????????
-
                 int skt = connect(hostfd, (struct sockaddr *) &hostAddr, len);
-                if (skt < 0) 
-                {
+                if (skt < 0)  {
                     printf("Connection problem\n");
                     close(hostfd);
                 }
-
                 // creating url to send to host
-
                 if (url != 0)
                     sprintf(requesToHost,"GET %s %s\r\nHost: %s\r\nConnection: close\r\n\r\n",url,http_ver,website);
                 else
                     sprintf(requesToHost,"GET / %s\r\nHost: %s\r\nConnection: close\r\n\r\n",http_ver,website);
            
                 printf("requesToHost %s\n", requesToHost);
-      
+     
                 // sending request to host server- Ex www.google.com
                 nbytes = send(hostfd,requesToHost,sizeof(requesToHost),0);
 
-                if (nbytes < 0)
-                {
+                if (nbytes < 0) {
                     perror("Host send failed");
                 }
-
-                else
-                {
+                else {
                     printf("\n\nSarted sending file from server...\n\n");
                     do{
-                        
                         bzero((char*)readBufferFrmServer,MAX_BUFFER_SIZE);
-                       
                         nbytes=recv(hostfd,readBufferFrmServer,sizeof(readBufferFrmServer),0);        // receiving from host server
-     
-                        
-                        if(!(nbytes<=0))
-                        {
+                        if(!(nbytes<=0))  {
                             send(sockfd,readBufferFrmServer,nbytes,0);                                 // sending to client 
                             fwrite(readBufferFrmServer,1,nbytes,fileProxy);
-                        }
-                       
-                        
+                        }                        
                     }while(nbytes>0);
 
-                    
                     printf("\n\nStarting the Prefeting operation... \n\n");
                     Prefetch_the_link(pwd,hostfd);
                     printf("Prefetch_the_link Done\n" );
                 }
-
                 fclose(fileProxy);
             }
-
-            else
-            {
+            else{
                 //printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
             }
         }
-
     }
     bzero(Invalid_version,sizeof(Invalid_version));
     bzero(Invalid_Method,sizeof(Invalid_Method));
