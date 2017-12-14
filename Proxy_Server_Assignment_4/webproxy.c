@@ -221,6 +221,49 @@ void Prefetch_the_link(char * pwd, int sockfd) {
     }
 }
 
+/*This function extracts the size information of the file*/
+int filesize(int file_desc)
+{
+  struct stat fileinfo;
+  if(fstat(file_desc, &fileinfo) == -1)
+  {
+    printf("Could not get the file info\n\r");
+    return -1;
+  }
+  return (int)fileinfo.st_size;
+}
+
+// Check from a list if the hostname is blocked 
+int Fileblockedcheck(char *path){
+ int file;
+ char filename[] = "blocked.txt";
+ char buffer[4000];
+ char *searchresult = NULL;
+ char result = FALSE;
+ file = open("blocked.txt",O_RDONLY);
+ int i=0;
+ char website[MAX_BUFFER_SIZE];
+ char *websiteWithSlash = NULL;
+ websiteWithSlash= strstr(path,"//");
+ websiteWithSlash+=2;
+ for(i=0;i<strlen(websiteWithSlash);i++) {
+     if(websiteWithSlash[i]=='/')
+        break;
+     website[i]=websiteWithSlash[i];
+    }  
+ printf("\n website: %s\n", website);
+ if(file == -1){
+ 	printf("ERROR : Could not open blocked list file\n\r");
+	return result;
+ }
+ read(file,buffer,filesize(file));
+ if((searchresult = strstr(buffer,website)) != NULL){
+ 	result = TRUE;
+ }
+ close(file);
+ return result;
+}
+
 int COUNT = 0;
 
 void serve_client(int sockfd, char *timeout, char *pwd) {
@@ -257,6 +300,8 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
 
     char Invalid_Method[MAX_BUFFER_SIZE] = "<html><body><H1>Error 400 Bad Request: Invalid Method </H1></body></html>";
     char Invalid_version[MAX_BUFFER_SIZE] =  "<html><body><H1>Error 400 Bad Request: Invalid HTTP Version</H1></body></html>";
+    char Invalid_request[MAX_BUFFER_SIZE] =  "<html><body><H1>Error 403 ERROR Forbidden: Invalid request</H1></body></html>";
+    
     
     if (read(sockfd, readBufferFrmClient, MAX_BUFFER_SIZE)<0) {
         printf("recieve error\n");
@@ -283,6 +328,12 @@ void serve_client(int sockfd, char *timeout, char *pwd) {
             printf("Invalid HTTP Version");
             exit(1);
         }
+	//blocked hostnames
+	else if (Fileblockedcheck(path)){
+	    write(sockfd,Invalid_request,strlen(Invalid_request));
+            printf("ERROR 403 Forbidden");
+            exit(1);
+	}
         else {
             int i=0;
             websiteWithSlash= strstr(path,"//");
